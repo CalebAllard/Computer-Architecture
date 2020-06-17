@@ -45,14 +45,6 @@ class CPU:
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
         #elif op == "SUB": etc
-        elif op == "LDI":
-            self.reg[reg_a] = reg_b
-            self.pc += 3
-        elif op == "PRN":
-            print(self.reg[reg_a])
-            self.pc += 2
-        elif op == "HLT":
-            sys.exit(1)
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -80,9 +72,18 @@ class CPU:
         running = True
 
         while running:
-            self.trace()
-            ir =  self.ram_read(self.pc)
-            
-            
+            ir = self.ram[self.pc]
+
+            if ir == 0b10000010:
+                self.reg[self.ram_read(self.pc + 1)] = self.ram_read(self.pc + 2)
+                self.pc += 3
+            elif ir == 0b01000111:
+                print(self.reg[self.ram_read(self.pc + 1)])
+                self.pc += 2
+            elif ir == 0b00000001:
+                running = False
+                self.pc += 1
+            else:
+                sys.exit(1)
                 
 
