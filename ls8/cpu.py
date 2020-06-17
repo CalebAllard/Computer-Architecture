@@ -10,6 +10,7 @@ class CPU:
         self.reg = [0] * 8
         self.ram = [0]*256
         self.pc = 0
+        self.sp = 7
 
     def ram_read(self, address):
         return self.ram[address]
@@ -84,6 +85,9 @@ class CPU:
         print()
 
     def run(self):
+        
+        self.reg[self.sp] = 0xf4
+        
         running = True
         
         while running:
@@ -102,6 +106,20 @@ class CPU:
             elif ir == 0b10100010: # MUL
                 self.alu("MUL",self.ram_read(self.pc + 1), self.ram_read(self.pc + 2))
                 self.pc += 3
+            elif ir == 0b01000101:
+                self.sp -= 1
+                reg_num = self.ram_read(self.pc + 1)
+                value = self.reg[reg_num]
+
+                top_of_stack_addr = self.reg[self.sp]
+                self.ram_write(top_of_stack_addr,value)
+                self.pc += 2
+            elif ir == 0b01000110:
+                pop_item = self.ram_read(self.sp)
+                reg_address = self.ram_read(self.pc + 1)
+                self.reg[reg_address] = pop_item
+                self.sp += 1
+                self.pc += 2
             else:
                 sys.exit(1)
                 
