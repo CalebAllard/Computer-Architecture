@@ -2,6 +2,16 @@
 
 import sys
 
+LDI = 0b10000010 # LDI
+PRN = 0b01000111 # PRN
+HLT = 0b00000001 # HLT
+ADD = 0b10100000 # ADD
+MUL = 0b10100010 # MUL
+PUSH = 0b01000101 # PUSH
+POP = 0b01000110 # POP
+CALL = 0b01010000 # CALL
+RET = 0b00010001 # RET
+
 class CPU:
     """Main CPU class."""
 
@@ -11,7 +21,62 @@ class CPU:
         self.ram = [0]*256
         self.pc = 0
         self.sp = 7
+        self.running = True
+    ###############################################    
+        self.branchtable = {
+            LDI: self.ldi,
+            PRN: self.prn,
+            HLT: self.hlt,
+            ADD: self.add,
+            MUL: self.mul,
+            PUSH: self.push,
+            POP: self.pop,
+            CALL: self.call,
+            RET: self.ret
 
+
+
+        }
+    ################################################
+    def ldi(self):
+        self.reg[self.ram_read(self.pc + 1)] = self.ram_read(self.pc + 2)
+        # self.pc += 3
+    def prn(self):
+        print(self.reg[self.ram_read(self.pc + 1)])
+        # self.pc += 2
+    def hlt(self):
+        self.running = False
+        # self.pc += 1
+    def add(self):
+        self.alu("ADD",self.ram_read(self.pc + 1), self.ram_read(self.pc + 2))
+        # self.pc += 3
+    def mul(self):
+        self.alu("MUL",self.ram_read(self.pc + 1), self.ram_read(self.pc + 2))
+        # self.pc += 3
+    def push(self):
+        self.sp -= 1
+        reg_num = self.ram_read(self.pc + 1)
+        value = self.reg[reg_num]
+        top_of_stack_addr = self.reg[self.sp]
+        self.ram_write(top_of_stack_addr,value)
+        # self.pc += 2
+    def pop(self):
+        pop_item = self.ram_read(self.sp)
+        reg_address = self.ram_read(self.pc + 1)
+        self.reg[reg_address] = pop_item
+        self.sp += 1
+        # self.pc += 2
+    def call(self):
+        next_addr = self.pc + 2
+        self.sp -= 1
+        self.ram_write(self.sp,next_addr)
+        address = self.reg[self.ram_read(self.pc + 1)]
+        self.pc = address
+    def ret(self):
+        next_addr = self.ram_read(self.sp)
+        self.sp += 1
+        self.pc = next_addr
+    #################################################
     def ram_read(self, address):
         return self.ram[address]
     
@@ -35,22 +100,6 @@ class CPU:
                 
                 self.ram_write(address, v)
                 address += 1
-
-        # program = [
-        #     # # From print8.ls8
-        #     # 0b10000010, # LDI R0,8
-        #     # 0b00000000,
-        #     # 0b00001000,
-        #     # 0b01000111, # PRN R0
-        #     # 0b00000000,
-        #     # 0b00000001, # HLT
-        # ]
-
-
-        # for instruction in program:
-        #     self.ram[address] = instruction
-        #     address += 1
-
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
@@ -88,39 +137,63 @@ class CPU:
         
         self.reg[self.sp] = 0xf4
         
-        running = True
+        # running = True
         
-        while running:
+        while self.running:
             # self.trace()
-            ir = self.ram[self.pc]
+            ir = self.pc
+            op = self.ram[ir]
+            # get op size, and pc set flag
+            size = ( (op & 0b11000000) >> 6 ) + 1
+            set_flag = (op & 0b00010000)
+            # call opperation to be run
+            self.branchtable[op]()
+            
+            # check to see if need to change pc
+            if set_flag != 0b00010000:
+                self.pc += size
+            
+            ##### OLD CODE ###############
+            # if ir == 0b10000010: # LDI
+            #     self.reg[self.ram_read(self.pc + 1)] = self.ram_read(self.pc + 2)
+            #     self.pc += 3
+            # elif ir == 0b01000111: # PRN
+            #     print(self.reg[self.ram_read(self.pc + 1)])
+            #     self.pc += 2
+            # elif ir == 0b00000001: # HLT
+            #     running = False
+            #     self.pc += 1
+            # elif ir == 0b10100000: # ADD
+            #     self.alu("ADD",self.ram_read(self.pc + 1), self.ram_read(self.pc + 2))
+            #     self.pc += 3
+            # elif ir == 0b10100010: # MUL
+            #     self.alu("MUL",self.ram_read(self.pc + 1), self.ram_read(self.pc + 2))
+            #     self.pc += 3
+            # elif ir == 0b01000101: # PUSH
+            #     self.sp -= 1
+            #     reg_num = self.ram_read(self.pc + 1)
+            #     value = self.reg[reg_num]
 
-            if ir == 0b10000010: # LDI
-                self.reg[self.ram_read(self.pc + 1)] = self.ram_read(self.pc + 2)
-                self.pc += 3
-            elif ir == 0b01000111: # PRN
-                print(self.reg[self.ram_read(self.pc + 1)])
-                self.pc += 2
-            elif ir == 0b00000001: # HLT
-                running = False
-                self.pc += 1
-            elif ir == 0b10100010: # MUL
-                self.alu("MUL",self.ram_read(self.pc + 1), self.ram_read(self.pc + 2))
-                self.pc += 3
-            elif ir == 0b01000101:
-                self.sp -= 1
-                reg_num = self.ram_read(self.pc + 1)
-                value = self.reg[reg_num]
-
-                top_of_stack_addr = self.reg[self.sp]
-                self.ram_write(top_of_stack_addr,value)
-                self.pc += 2
-            elif ir == 0b01000110:
-                pop_item = self.ram_read(self.sp)
-                reg_address = self.ram_read(self.pc + 1)
-                self.reg[reg_address] = pop_item
-                self.sp += 1
-                self.pc += 2
-            else:
-                sys.exit(1)
+            #     top_of_stack_addr = self.reg[self.sp]
+            #     self.ram_write(top_of_stack_addr,value)
+            #     self.pc += 2
+            # elif ir == 0b01000110: # POP
+            #     pop_item = self.ram_read(self.sp)
+            #     reg_address = self.ram_read(self.pc + 1)
+            #     self.reg[reg_address] = pop_item
+            #     self.sp += 1
+            #     self.pc += 2
+            # elif ir == 0b01010000: # CALL
+            #     next_addr = self.pc + 2
+            #     self.sp -= 1
+            #     self.ram_write(self.sp,next_addr)
+            #     address = self.reg[self.ram_read(self.pc + 1)]
+            #     self.pc = address
+            # elif ir == 0b00010001: # RET
+            #     next_addr = self.ram_read(self.sp)
+            #     self.sp += 1
+            #     self.pc = next_addr
+            # else:
+            #     sys.exit(1)
                 
 
