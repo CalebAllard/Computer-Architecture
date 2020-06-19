@@ -11,6 +11,10 @@ PUSH = 0b01000101 # PUSH
 POP = 0b01000110 # POP
 CALL = 0b01010000 # CALL
 RET = 0b00010001 # RET
+CMP = 0b10100111#CMP
+JMP = 0b01010100#JMP
+JEQ = 0b01010101#JEQ
+JNE = 0b01010110#JNE
 
 class CPU:
     """Main CPU class."""
@@ -20,7 +24,7 @@ class CPU:
         self.reg = [0] * 8
         self.ram = [0]*256
         self.pc = 0
-        self.sp = 7
+        self.sp = 244
         self.running = True
     ###############################################    
         self.branchtable = {
@@ -32,12 +36,46 @@ class CPU:
             PUSH: self.push,
             POP: self.pop,
             CALL: self.call,
-            RET: self.ret
-
-
-
+            RET: self.ret,
+            CMP: self.comp,
+            JMP: self.jmp,
+            JEQ: self.jeq,
+            JNE: self.jne
         }
+        
+        self.E = 0
+        self.L = 0
+        self.G = 0 
     ################################################
+    def comp(self):
+        #reset flags
+        self.E = 0
+        self.L = 0
+        self.G = 0
+
+        value_one = self.reg[self.ram[self.pc + 1]]
+        value_two = self.reg[self.ram[self.pc + 2]]
+
+        if value_one == value_two:
+            self.E = 1
+        elif value_one < value_two:
+            self.L = 1
+        elif value_one > value_two:
+            self.G = 1
+    def jmp(self):
+        jump_addr = self.reg[self.ram[self.pc + 1]]
+        self.pc = jump_addr
+    def jeq(self):
+        if self.E == 1:
+            self.pc = self.reg[self.ram[self.pc + 1]]
+        else:
+            self.pc += 2
+
+    def jne(self):
+        if self.E == 0:
+            self.pc = self.reg[self.ram[self.pc + 1]]
+        else:
+            self.pc += 2
     def ldi(self):
         self.reg[self.ram_read(self.pc + 1)] = self.ram_read(self.pc + 2)
         # self.pc += 3
@@ -135,7 +173,7 @@ class CPU:
 
     def run(self):
         
-        self.reg[self.sp] = 0xf4
+        self.ram[self.sp] = 0xf4
         
         # running = True
         

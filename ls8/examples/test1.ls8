@@ -1,0 +1,7 @@
+LDI R0,10
+LDI R1,20
+LDI R2,Test1
+CMP R0,R1
+JEQ R2       
+LDI R3,1
+PRN R3   
